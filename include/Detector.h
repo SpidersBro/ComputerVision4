@@ -57,7 +57,7 @@ public:
 	Detector(const std::string &);
 	virtual ~Detector();
 
-	double run(int pos_amount, bool white, bool eq, double C);
+	void run();
 
 	static std::string StorageExt;
 	static std::string ImageExt;

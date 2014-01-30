@@ -89,7 +89,7 @@ void Detector::readPosFilelist(vector<string> &pos_files)
 	const string dirs_regx = Detector::cfg()->getValue<string>("settings/images/pos/path@regx");
 	const string mask_regx = Detector::cfg()->getValue<string>("settings/images/pos/files@regx");
 
-	//cout << "Read positive file names" << endl;
+	cout << "Read positive file names" << endl;
 	vector<string> pos_directories;
 	FileIO::getDirectory(pos_path, pos_directories, dirs_regx);
 
@@ -106,7 +106,7 @@ void Detector::readPosFilelist(vector<string> &pos_files)
 		pos_files.insert(pos_files.end(), d_files.begin(), d_files.end());
 
 		string etf = Utility::show_fancy_etf(index, pos_directories.size(), 100, t0, fps);
-		//if (!etf.empty()) cout << etf << endl;
+		if (!etf.empty()) cout << etf << endl;
 
 		++index;
 	}
@@ -120,7 +120,7 @@ void Detector::readPosFilelist(vector<string> &pos_files)
  */
 void Detector::readNegFilelist(vector<string> &neg_files)
 {
-	//cout << "Read negative file names" << endl;
+	cout << "Read negative file names" << endl;
 	const string neg_path = Detector::cfg()->getValue<string>("settings/images/neg/path");
 	const string files_regx = Detector::cfg()->getValue<string>("settings/images/neg/files@regx");
 	FileIO::getDirectory(neg_path, neg_files, files_regx, neg_path);
@@ -145,7 +145,7 @@ void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &p
 	const int height = width * double(image.rows / (double) image.cols);
 	if (_model_size.area() == 0) _model_size = Size(width, height);
 
-	//cout << "Read positive data (" << pos_train.size() << ")" << endl;
+	cout << "Read positive data (" << pos_train.size() << ")" << endl;
 	Mat mv_pos_data, sv_pos_data;
 	int index = 0;
 	vector<double> fps;
@@ -201,7 +201,7 @@ void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &p
 		pos_data.push_back(features1dF);
 
 		string etf = Utility::show_fancy_etf(index, pos_train.size(), 10, t0, fps);
-		//if (!etf.empty()) cout << etf << endl;
+		if (!etf.empty()) cout << etf << endl;
 
 		++index;
 	}
@@ -236,7 +236,7 @@ void Detector::readNegData(const std::vector<std::string> &neg_train, cv::Mat &n
 	double factor = _pos_amount * _posneg_factor / (double) neg_train.size();
 	int fpnt = ceil(MAX(factor, 1));  //guess we should only train on super models from here on... ;)
 
-	//cout << "Read negative data (" << neg_train.size() << ")" << endl;
+	cout << "Read negative data (" << neg_train.size() << ")" << endl;
 	vector<double> fps;
 	int index = 0;
 	int64 t0 = Utility::get_time_curr_tick();
@@ -283,7 +283,7 @@ void Detector::readNegData(const std::vector<std::string> &neg_train, cv::Mat &n
 			neg_data.push_back(features1dF);
 
 			string etf = Utility::show_fancy_etf(index, neg_train.size() * fpnt, _posneg_factor * 10, t0, fps);
-			//if (!etf.empty()) cout << etf << endl;
+			if (!etf.empty()) cout << etf << endl;
 
 			++index;
 		}
@@ -338,10 +338,10 @@ void Detector::createPyramid(const Mat &image, vector<Mat*> &pyramid)
     
     
 	int amount_of_layers = MAX(max_layers, _layer_scale_interval) + _layer_scale_interval;
-	//cout << amount_of_layers << " " << _layer_scale_interval << endl;
+	cout << amount_of_layers << " " << _layer_scale_interval << endl;
     
 	double image_shrinkage_per_layer = 1.0 / (pow(2.0, (double)(1.0 / _layer_scale_interval)));
-	//cout << image_shrinkage_per_layer << endl;
+	cout << image_shrinkage_per_layer << endl;
 	pyramid.push_back(new Mat(image));
     
 	double height = image.size().height;
@@ -370,7 +370,7 @@ void Detector::createPyramid(const Mat &image, vector<Mat*> &pyramid)
 	}
 }
 
-double Detector::run(int pos_amount, bool white, bool eq, double C)
+void Detector::run()
 {
 	assert(FileIO::isFile(_query_image_file));
 
@@ -380,15 +380,13 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	readNegFilelist(neg_files);
   
     //Uncomment to get pos_amount value from config file.
-    //int pos_amount =  _pos_amount;
-    _do_equalizing = eq;
-    _do_whitening = white;
+    int pos_amount =  _pos_amount;
     
 	assert((int ) pos_files.size() > pos_amount);
 	assert((int ) neg_files.size() > 0);
 	int neg_amount = MIN((int ) neg_files.size() / 2, pos_amount * _posneg_factor / 2);
 
-	//cout << "Total images, pos:" << pos_files.size() << ", neg:" << neg_files.size() << endl;
+	cout << "Total images, pos:" << pos_files.size() << ", neg:" << neg_files.size() << endl;
 
 	vector<string> pos_train(pos_files.begin(), pos_files.begin() + pos_amount);
 	vector<string> pos_val(pos_files.begin() + pos_amount,
@@ -397,8 +395,8 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	vector<string> neg_val(neg_files.begin() + neg_amount,
 			neg_files.begin() + MIN(2 * neg_amount, (int ) neg_files.size() - neg_amount));
 
-	//cout << "Positive training:" << pos_train.size() << ", validation:" << pos_val.size() << endl;
-	//cout << "Negative training:" << neg_train.size() << ", validation:" << neg_val.size() << endl;
+	cout << "Positive training:" << pos_train.size() << ", validation:" << pos_val.size() << endl;
+	cout << "Negative training:" << neg_train.size() << ", validation:" << neg_val.size() << endl;
 
 	Mat pos_tmp_im = imread(pos_files.front(), CV_LOAD_IMAGE_GRAYSCALE);
 	int width = _target_width;
@@ -408,8 +406,8 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	resize(pos_tmp_im, pos_tmp_sz_im, sz_dim);
 
 	Mat pos_train_data, neg_train_data;
-	//cout << endl << "line:" << __LINE__ << ") Read training images" << endl;
-	//cout << "==============================" << endl;
+	cout << endl << "line:" << __LINE__ << ") Read training images" << endl;
+	cout << "==============================" << endl;
 	readPosData(pos_train, pos_train_data);
 	readNegData(neg_train, neg_train_data);
 	/////////////////////////////////////////////////////////////////////////////
@@ -453,8 +451,8 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	labels.push_back(pos_labels);
 	labels.push_back(neg_labels);
 
-	//cout << endl << "line:" << __LINE__ << ") Read validation images" << endl;
-	//cout << "==============================" << endl;
+	cout << endl << "line:" << __LINE__ << ") Read validation images" << endl;
+	cout << "==============================" << endl;
 	Mat pos_val_data, neg_val_data;
 	readPosData(pos_val, pos_val_data);
 	readNegData(neg_val, neg_val_data);
@@ -470,7 +468,7 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	val_data.push_back(_do_whitening ? whitened_pos_val_data : pos_val_data);
 	val_data.push_back(_do_whitening ? whitened_neg_val_data : neg_val_data);
 
-	//cout << "Show windows" << endl;
+	cout << "Show windows" << endl;
 	namedWindow("Pos examples", CV_WINDOW_KEEPRATIO);
 	namedWindow("Neg examples", CV_WINDOW_KEEPRATIO);
 	namedWindow("Pos mean image", CV_WINDOW_KEEPRATIO);
@@ -479,8 +477,8 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	imshow("Neg examples", neg_tmp_sz_im_canvas);
 	imshow("Pos mean image", _pos_sum8U);
 	imshow("Neg mean image", _neg_sum8U);
-	//cout << "Press a key to continue" << endl;
-	//waitKey();
+	cout << "Press a key to continue" << endl;
+	waitKey();
 	namedWindow("Model", CV_WINDOW_KEEPRATIO);
 
 	Mat val_labels(pos_val_data.rows, 1, CV_32S, Scalar::all(1));
@@ -497,11 +495,11 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	Mat alt_pred = (val_data * _pos_sumF.t() > 0) / 255;
 	double alt_true = alt_pred.size().height - sum((alt_pred == val_gnd) / 255)[0];
 	double alt_pct = (alt_true / (double) alt_pred.size().height) * 100.0;
-	//cout << "Validation correct with mean model: " << alt_pct << "%" << endl;
+	cout << "Validation correct with mean model: " << alt_pct << "%" << endl;
 	/////////////////////////////////////////////////////////////////////////////
 
 	/////////////////////////////// Train SVM ///////////////////////////////////
-	//cout << endl << "Build SVM model" << endl;
+	cout << endl << "Build SVM model" << endl;
 
 	Mat best_W;
 	double best_b = 0;
@@ -509,9 +507,9 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	double best_pct = -DBL_MAX;
 
 	MySVM svm;
-	//const double C = Detector::cfg()->getValue<double>("settings/svm/params/C");
+	const double C = Detector::cfg()->getValue<double>("settings/svm/params/C");
     
-	//cout << endl << "line:" << __LINE__ << ") C: " << C << endl;
+	cout << endl << "line:" << __LINE__ << ") C: " << C << endl;
 
 	// Set up SVM's parameters
 	SVMParams params;
@@ -527,7 +525,7 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 		data = train_data;
 
 	// Train the SVM
-	//cout << "line:" << __LINE__ << ") Training SVM..." << endl;
+	cout << "line:" << __LINE__ << ") Training SVM..." << endl;
     
     
 	svm.train(data, labels, Mat(), Mat(), params);
@@ -540,11 +538,11 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	cv::Mat diff = labels_32F == labels_train;
 	double train_true = countNonZero(diff);
 	double train_pct = (train_true / (double) diff.rows) * 100.0;
-	//cout << "\tTraining correct: " << train_pct << "%" << endl;
+	cout << "\tTraining correct: " << train_pct << "%" << endl;
 
 	const int sv_count = svm.get_support_vector_count();
 	const int sv_length = svm.get_var_count();
-	//cout << "\tSupport vector(s): " << sv_count << ", vector-length: " << sv_length << endl;
+	cout << "\tSupport vector(s): " << sv_count << ", vector-length: " << sv_length << endl;
 
 	CvSVMDecisionFunc* decision = svm.getDecisionFunc();
 	Mat W = Mat::zeros(1, sv_length, CV_64F);
@@ -557,7 +555,7 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	}
 
 	const double b = -decision->rho;
-	//cout << "line:" << __LINE__ << ") bias: " << b << endl;
+	cout << "line:" << __LINE__ << ") bias: " << b << endl;
 
 
 	 {
@@ -582,10 +580,9 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	 double train_pct = (train_true / (double) train_pred.rows) * 100.0;
 	 double val_true = val_pred.rows - sum((val_pred == val_gnd) / 255)[0];
 	 double val_pct = (val_true / (double) val_pred.rows) * 100.0;
-	 //cout << "\tTraining correct: " << train_pct << "%" << endl;
-	 //cout << "\tValidation correct: " << val_pct << "%" << endl;
+	 cout << "\tTraining correct: " << train_pct << "%" << endl;
+	 cout << "\tValidation correct: " << val_pct << "%" << endl;
          
-         return val_pct;
 	 }
     
     
@@ -604,12 +601,12 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	W_rect.convertTo(W_img, CV_8U);
 	bitwise_not(W_img, nW_img);
 	imshow("Model", nW_img);
-	//cout << "Press a key to continue" << endl;
-	//waitKey();
+	cout << "Press a key to continue" << endl;
+	waitKey();
 	/////////////////////////////////////////////////////////////////////////////
 
 	////////////////////////////// Test on real image ///////////////////////////
-	//cout << "Detecting faces..." << endl;
+	cout << "Detecting faces..." << endl;
 
 	// Read ground truth if we consider data/img1.jpg
 	vector<Rect> ground_truths;
@@ -644,14 +641,14 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 	Mat detections;
 	vector<Range> layers;
 
-	//cout << "Processing " << pyramid.size() << " pyramid layers" << endl;
+	cout << "Processing " << pyramid.size() << " pyramid layers" << endl;
 	vector<double> fps;
 	int64 t0 = Utility::get_time_curr_tick();
 
 	for (size_t layer = 0; layer < pyramid.size(); ++layer)
 	{
 		string etf = Utility::show_fancy_etf(layer, pyramid.size(), 1, t0, fps);
-		//if (!etf.empty()) cout << etf << endl;
+		if (!etf.empty()) cout << etf << endl;
 
 		// Generate subwindow locations
         if(pyramid.at(layer)->cols - _model_size.width < 1 || pyramid.at(layer)->rows - _model_size.height <1)
@@ -868,7 +865,7 @@ double Detector::run(int pos_amount, bool white, bool eq, double C)
 				char p_buf[32], r_buf[32];
 				sprintf(p_buf, "%4.2f", precision);
 				sprintf(r_buf, "%4.2f", recall);
-				//cout << "Precision: " << p_buf << "%\tRecall: " << r_buf << "%" << endl;
+				cout << "Precision: " << p_buf << "%\tRecall: " << r_buf << "%" << endl;
 			}
 
 			o_val = o_value;
@@ -919,67 +916,5 @@ int main(int argc, char** argv)
     double tempMax =0;
 	Detector detector(query_image_file);
     
-    for( double i = 10; i < C; i += 10){
-        for(int j = 100; j < pos_amount; j += 100 ) {
-            
-            cout << endl;
-            cout << endl;
-            cout << "C value " << i << endl;
-            cout << "pos_amount " << j << endl;
-            cout << endl;
-            
-            tempMax = detector.run(j, true, true, i);
-            cout << "val_pct " << tempMax << endl;
-            if (tempMax > max ) {
-                max = tempMax;
-                cout << "WE HAVE A WINNER" << endl;
-                cout << "val_pct is: " << max << " with:" << endl;
-                cout << "pos_amount: " << j << endl;
-                cout << "C value: " << i << endl;
-                cout << "do_white: true " << endl;
-                cout << "do_eq: true " << endl;
-            }
-            
-            tempMax = detector.run(j, true, false, i);
-            cout << "val_pct " << tempMax << endl;
-            if ( tempMax > max ) {
-                max = tempMax;
-                cout << "WE HAVE A WINNER" << endl;
-                cout << "val_pct is: " << max << " with:" << endl;
-                cout << "pos_amount: " << j << endl;
-                cout << "C value: " << i << endl;
-                cout << "do_white: true " << endl;
-                cout << "do_eq: false " << endl;
-                cout << endl;
-            }
-            
-            tempMax = detector.run(j, false, false, i);
-            cout << "val_pct " << tempMax << endl;
-            if ( tempMax > max ) {
-                max = tempMax;
-                cout << "WE HAVE A WINNER" << endl;
-                cout << "val_pct is: " << max << " with:" << endl;
-                cout << "pos_amount: " << j << endl;
-                cout << "C value: " << i << endl;
-                cout << "do_white: false " << endl;
-                cout << "do_eq: false " << endl;
-            }
-            
-            tempMax = detector.run(j, false, true, i);
-            cout << "val_pct " << tempMax << endl;
-            if ( tempMax > max ) {
-                max = tempMax;
-                cout << "WE HAVE A WINNER" << endl;
-                cout << "val_pct is: " << max << " with:" << endl;
-                cout << "pos_amount: " << j << endl;
-                cout << "C value: " << i << endl;
-                cout << "do_white: false " << endl;
-                cout << "do_eq: true " << endl;
-
-            }
-        }
-    }
-    cout << endl;
-    cout << endl;
-    cout << "Max value is: " << max << endl;
+    detector.run();
 };
