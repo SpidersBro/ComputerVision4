@@ -919,8 +919,6 @@ int main(int argc, char** argv)
     double tempMax =0;
 	Detector detector(query_image_file);
     
-    detector.run();
-    /*
     for( double i = 10; i < C; i += 10){
         for(int j = 100; j < pos_amount; j += 100 ) {
             
@@ -984,5 +982,4 @@ int main(int argc, char** argv)
     cout << endl;
     cout << endl;
     cout << "Max value is: " << max << endl;
-    */
 };
