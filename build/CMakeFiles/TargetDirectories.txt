@@ -1,0 +1,2 @@
+/Users/barendpoot/workspace/ComputerVision4/ComputerVision4/build/CMakeFiles/LinearSVMFaceDetector.dir
+/Users/barendpoot/workspace/ComputerVision4/ComputerVision4/build/CMakeFiles/ticpp.dir
