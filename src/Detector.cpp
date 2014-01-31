@@ -182,7 +182,7 @@ void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &p
 		resize(features, features, _model_size);
 
         
-        
+       
         if(putInVector) {
             // HOGDescrptiors
             //Mat img_resize;
@@ -249,8 +249,6 @@ void Detector::readNegData(const std::vector<std::string> &neg_train, cv::Mat &n
 
 	Mat mv_neg_data, sv_neg_data;
     
-    //Uncomment to get values from config file.
-    //int pos_amount =  _pos_amount;
 
 	double factor = _pos_amount * _posneg_factor / (double) neg_train.size();
 	int fpnt = ceil(MAX(factor, 1));  //guess we should only train on super models from here on... ;)
@@ -571,8 +569,9 @@ void Detector::run()
 
     cout << "Descriptor size" << descriptors.size() << endl;
     
-    
     Mat data(descriptors.size(), descriptors[0].size(), CV_32F);
+    
+    
     cout << "train_data rows" << train_data.rows << endl;
     cout << "train_data rows" << train_data.cols << endl;
     cout << "Data       rows" << data.rows << endl;
@@ -580,6 +579,7 @@ void Detector::run()
     cout << "Labels     rows" << labels.rows << endl;
     cout << "Labels     cols" << labels.cols << endl;
 
+    
     for (size_t i = 0; i < descriptors.size(); i++) {
         if(i%10 == 0)
             cout << i << "/" << descriptors.size() << endl;
@@ -588,11 +588,11 @@ void Detector::run()
         }
     }
     
-//	if (train_data.type() != CV_32F)
-//		train_data.convertTo(data, CV_32F);
-//	else
-//		data = train_data;
-//
+	if (train_data.type() != CV_32F)
+		train_data.convertTo(train_data, CV_32F);
+	else
+    data = train_data;
+
     
     
 	// Train the SVM
@@ -615,7 +615,7 @@ void Detector::run()
 	cout << "\tSupport vector(s): " << sv_count << ", vector-length: " << sv_length << endl;
 
 	CvSVMDecisionFunc* decision = svm.getDecisionFunc();
-	Mat W = Mat::zeros(1, sv_length, CV_64F);
+	Mat W = Mat::zeros(1, sv_length, CV_32F);
 	for (int i = 0; i < sv_count; ++i)
 	{
 		// Compute W from support_vector and decision->alpha
@@ -627,7 +627,6 @@ void Detector::run()
 	const double b = -decision->rho;
 	cout << "line:" << __LINE__ << ") bias: " << b << endl;
     
-
 	 {
 	 // Compute the confidence values for training and validation as the distances
 	 // between the sample vectors X and weight vector W, using bias b:
@@ -639,16 +638,17 @@ void Detector::run()
 	 // The confidence value for training should be the same value you get from
 	 // sv m.predict(data, labels_train);
      
-         
-     Mat WTrans(1, sv_length, CV_64F);
-    
-     //Mat WTrans;
+ 
+     Mat WTrans;
+     Mat WTrans_32F;
      transpose(W,WTrans);
-    
-     
-        
-	 Mat conf_train = ( train_data * WTrans) + b;
-     Mat conf_val = ( val_data * WTrans ) + b;
+         
+         
+     WTrans.convertTo(WTrans_32F, CV_32F);
+       
+         
+	 Mat conf_train = ( train_data * WTrans_32F) + b;
+     Mat conf_val = ( val_data * WTrans_32F ) + b;
 	 Mat train_pred = (conf_train > 0) / 255;
 	 Mat val_pred = (conf_val > 0) / 255;
 	 double train_true = train_pred.rows - sum((train_pred == train_gnd) / 255)[0];
