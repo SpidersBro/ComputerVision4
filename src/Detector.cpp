@@ -131,7 +131,7 @@ void Detector::readNegFilelist(vector<string> &neg_files)
 /*
  * Read positive image data
  */
-void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &pos_data)
+void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &pos_data, bool putInVector)
 {
 	assert(!pos_train.empty());
 
@@ -152,26 +152,46 @@ void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &p
 	int64 t0 = Utility::get_time_curr_tick();
 	Mat pos_sum;
 
-    //HOGDescriptor hog;
-    //vector<float> featurevector;
-    //Mat detector;
+
+    HOGDescriptor hog(
+    _model_size, //winSize
+    Size(16,16), //blocksize
+    Size(8,8), //blockStride,
+    Size(8,8), //cellSize,
+    9, //nbins,
+    0, //derivAper,
+    -1, //winSigma,
+    0, //histogramNormType,
+    0.2, //L2HysThresh,
+    0, //gammal correction,
+    64
+    );
+    
+    vector<float> featurevector;
+    vector<Point>locations;
 	for (size_t f = 0; f < pos_train.size(); ++f)
 	{
 		string file = pos_train[f];
 		image = imread(file, CV_LOAD_IMAGE_GRAYSCALE);
+   
         
-        //hog.compute(image, featurevector);
-        //if ( !featurevector.empty() ) {
-        //    cout << "Niet leeg dus "<< featurevector.size() << endl;
-        //}
-        //hog.setSVMDetector(featurevector);
-        //detector.push_back(featurevector);
-        
+       
 		Rect rect = Rect(Point(x1, y1), Point(image.cols - x2, image.rows - y2));
 		assert(rect.area() < image.size().area());
 		Mat features = image(rect);
 		resize(features, features, _model_size);
 
+        
+        
+        if(putInVector) {
+            // HOGDescrptiors
+            //Mat img_resize;
+            //resize(image,img_resize,Size(64,128));
+            //hog.compute(features, featurevector,Size(0,0),Size(0,0),locations);
+            hog.compute(features, featurevector);
+            descriptors.push_back(featurevector);
+        }
+        
 		if (pos_sum.empty())
 		{
 			Mat sz_imF;
@@ -188,7 +208,7 @@ void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &p
 		Mat features1d = features.reshape(1, 1);
 		Mat features1dF;
 		features1d.convertTo(features1dF, CV_64F);
-
+       
 		Mat mean, stddev;
 		meanStdDev(features1dF, mean, stddev);
 		Mat mean_line(1, features1dF.cols, CV_64F);
@@ -218,13 +238,12 @@ void Detector::readPosData(const std::vector<std::string> &pos_train, cv::Mat &p
 
 	normalize(pos_sum1dF.reshape(1, height), pos_sum, 255, 0, NORM_MINMAX);
 	pos_sum.convertTo(_pos_sum8U, CV_8U);
-    //return detector;
 }
 
 /*
  * Read negative image data
  */
-void Detector::readNegData(const std::vector<std::string> &neg_train, cv::Mat &neg_data)
+void Detector::readNegData(const std::vector<std::string> &neg_train, cv::Mat &neg_data, bool putInVector)
 {
 	assert(!neg_train.empty());
 
@@ -241,19 +260,47 @@ void Detector::readNegData(const std::vector<std::string> &neg_train, cv::Mat &n
 	int index = 0;
 	int64 t0 = Utility::get_time_curr_tick();
 	Mat neg_sum;
+    HOGDescriptor hog(
+      _model_size, //winSize
+      Size(16,16), //blocksize
+      Size(8,8), //blockStride,
+      Size(8,8), //cellSize,
+      9, //nbins,
+      0, //derivAper,
+      -1, //winSigma,
+      0, //histogramNormType,
+      0.2, //L2HysThresh,
+      0, //gammal correction,
+      64
+      );
+    
+    
+    vector<float> featurevector;
+    vector<Point>locations;
 	for (size_t f = 0; f < neg_train.size(); ++f)
 	{
 		string file = neg_train[f];
 		Mat image = imread(file, CV_LOAD_IMAGE_GRAYSCALE);
 
+        
 		for (int i = 0; i < fpnt; ++i)
 		{
+            
 			int x = 0 + (rand() % ((image.cols - _model_size.width) - 0));
 			int y = 0 + (rand() % ((image.rows - _model_size.height) - 0));
 			assert(x + _model_size.width < image.cols);
 			assert(y + _model_size.height < image.rows);
 			Mat features = image(Rect(Point(x, y), _model_size)).clone();
 
+            if(putInVector) {
+                // HOGDescrptiors
+                //Mat img_resize;
+                //resize(image,img_resize,Size(64,128));
+                //hog.compute(features, featurevector,Size(0,0),Size(0,0),locations);
+                hog.compute(features, featurevector);
+                descriptors.push_back(featurevector);
+            }
+            
 			if (neg_sum.empty())
 			{
 				Mat sz_imF;
@@ -266,6 +313,8 @@ void Detector::readNegData(const std::vector<std::string> &neg_train, cv::Mat &n
 				features.convertTo(sz_imF, CV_64F);
 				neg_sum += sz_imF;
 			}
+
+            
 
 			Mat features1d = features.reshape(1, 1);
 			Mat features1dF;
@@ -408,8 +457,8 @@ void Detector::run()
 	Mat pos_train_data, neg_train_data;
 	cout << endl << "line:" << __LINE__ << ") Read training images" << endl;
 	cout << "==============================" << endl;
-	readPosData(pos_train, pos_train_data);
-	readNegData(neg_train, neg_train_data);
+	readPosData(pos_train, pos_train_data,true);
+	readNegData(neg_train, neg_train_data,true);
 	/////////////////////////////////////////////////////////////////////////////
 
 	/////////////////////////// Whitening transformation ////////////////////////
@@ -450,12 +499,14 @@ void Detector::run()
 	Mat labels;
 	labels.push_back(pos_labels);
 	labels.push_back(neg_labels);
-
+    cout << "pos_label.rows " << pos_labels.rows << endl;
+    cout << "neg_label.rows " << neg_labels.rows << endl;
+    cout << "labels.rows " << labels.rows << endl;
 	cout << endl << "line:" << __LINE__ << ") Read validation images" << endl;
 	cout << "==============================" << endl;
 	Mat pos_val_data, neg_val_data;
-	readPosData(pos_val, pos_val_data);
-	readNegData(neg_val, neg_val_data);
+	readPosData(pos_val, pos_val_data,false);
+	readNegData(neg_val, neg_val_data,false);
 
 	Mat whitened_pos_val_data, whitened_neg_val_data;
 	if (_do_whitening)
@@ -518,16 +569,35 @@ void Detector::run()
 	params.kernel_type = SVM::LINEAR;
 	params.term_crit = TermCriteria(CV_TERMCRIT_ITER, _max_count, _epsilon);
 
-	Mat data;
-	if (train_data.type() != CV_32F)
-		train_data.convertTo(data, CV_32F);
-	else
-		data = train_data;
+    cout << "Descriptor size" << descriptors.size() << endl;
+    
+    
+    Mat data(descriptors.size(), descriptors[0].size(), CV_32F);
+    cout << "train_data rows" << train_data.rows << endl;
+    cout << "train_data rows" << train_data.cols << endl;
+    cout << "Data       rows" << data.rows << endl;
+    cout << "Data       cols" << data.cols << endl;
+    cout << "Labels     rows" << labels.rows << endl;
+    cout << "Labels     cols" << labels.cols << endl;
 
+    for (size_t i = 0; i < descriptors.size(); i++) {
+        if(i%10 == 0)
+            cout << i << "/" << descriptors.size() << endl;
+        for (size_t j = 0; j < descriptors[0].size(); j++) {
+            data.at<float>(i, j) = descriptors[i][j];
+        }
+    }
+    
+//	if (train_data.type() != CV_32F)
+//		train_data.convertTo(data, CV_32F);
+//	else
+//		data = train_data;
+//
+    
+    
 	// Train the SVM
 	cout << "line:" << __LINE__ << ") Training SVM..." << endl;
-    
-    
+
 	svm.train(data, labels, Mat(), Mat(), params);
 
 	Mat labels_train;
@@ -556,7 +626,7 @@ void Detector::run()
 
 	const double b = -decision->rho;
 	cout << "line:" << __LINE__ << ") bias: " << b << endl;
-
+    
 
 	 {
 	 // Compute the confidence values for training and validation as the distances
@@ -569,9 +639,14 @@ void Detector::run()
 	 // The confidence value for training should be the same value you get from
 	 // sv m.predict(data, labels_train);
      
-     Mat WTrans;
-     transpose(W,WTrans);
          
+     Mat WTrans(1, sv_length, CV_64F);
+    
+     //Mat WTrans;
+     transpose(W,WTrans);
+    
+     
+        
 	 Mat conf_train = ( train_data * WTrans) + b;
      Mat conf_val = ( val_data * WTrans ) + b;
 	 Mat train_pred = (conf_train > 0) / 255;
@@ -584,8 +659,6 @@ void Detector::run()
 	 cout << "\tValidation correct: " << val_pct << "%" << endl;
          
 	 }
-    
-    
     
 
 	best_W = W;
@@ -901,6 +974,7 @@ void Detector::run()
 	/////////////////////////////////////////////////////////////////////////////
 }
     
+    
 
 } /* namespace nl_uu_science_gmt */
 
@@ -910,10 +984,10 @@ int main(int argc, char** argv)
 	std::string query_image_file = Detector::cfg()->getValue<string>("settings/images/test@file");
 	if (argc > 1) query_image_file = (std::string) argv[1];
 	cout << "Testing on: " << query_image_file << endl;
-    double C = 50;
-    int pos_amount = 2500;
-    double max = 0;
-    double tempMax =0;
+    //double C = 50;
+    //int pos_amount = 2500;
+    //double max = 0;
+    //double tempMax =0;
 	Detector detector(query_image_file);
     
     detector.run();

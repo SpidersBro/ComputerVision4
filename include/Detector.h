@@ -40,6 +40,7 @@ class Detector
 	bool _do_whitening;
 	const double _gt_accuracy;
 	const std::string _query_image_file;
+    std::vector<std::vector<float>> descriptors;
 
 	cv::Size _model_size;
 	cv::Mat _neg_sum8U, _pos_sum8U, _pos_sumF;
@@ -48,8 +49,8 @@ class Detector
 	void readPosFilelist(std::vector<std::string> &);
 	void readNegFilelist(std::vector<std::string> &);
 
-	void readPosData(const std::vector<std::string> &, cv::Mat &);
-	void readNegData(const std::vector<std::string> &, cv::Mat &);
+	void readPosData(const std::vector<std::string> &, cv::Mat &,bool);
+	void readNegData(const std::vector<std::string> &, cv::Mat &,bool);
 
 	void createPyramid(const cv::Mat &, std::vector<cv::Mat*> &);
 
